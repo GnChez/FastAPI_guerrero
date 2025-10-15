@@ -32,6 +32,6 @@ def update(idx, mod_user:dict):
 
 @app.delete("/api/usuaris/{idx}", response_model=dict)
 def delete(idx):
-    lista_users.pop()
+    lista_users.pop(idx)
     return dict(zip(range(len(lista_users)),lista_users))
 
