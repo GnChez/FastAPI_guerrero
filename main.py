@@ -1,37 +1,33 @@
-from fastapi import FastAPI
+from sqlmodel import SQLModel, create_engine, Session, select
+from dotenv import load_dotenv
+import os
+from fastapi import FastAPI, Depends
+from Product import ProductRequest, Product, ProductResponse
 app = FastAPI()
 
+load_dotenv()
+DATABASE_URL = os.getenv("DATABASE_URL")
+engine = create_engine(DATABASE_URL)
 
-lista_users = ["hola", "uno", "dos", "tres"]
+SQLModel.metadata.create_all(engine)
 
-@app.post("/api/users", response_model=dict)
-def crear(user: dict):
-    for i in user.values():
-        lista_users.append(i)
-    return dict(zip(range(len(lista_users)),lista_users))
+def get_db():
+    db = Session(engine)
+    try:
+        yield db
+    finally:
+        db.close()
 
-@app.get("/api/users/{idx}", response_model=dict)
-def llegir(idx):
-    id = int(idx)
-    if id<len(lista_users):
-        return {"user":lista_users[id]}
-    return {"message":"User not found"}
 
-@app.get("/api/users", response_model=dict)
-def llegirTots():
-    return dict(zip(range(len(lista_users)),lista_users))
+@app.post("/product", response_model=dict, tags=["CREATE"])
+async def addProduct(product: ProductRequest, db:Session = Depends(get_db)):
+    insert_prod = Product.model_validate(product)
+    db.add(insert_prod)
+    db.commit()
+    return {"msg":"Product added"}
 
-@app.put("/api/users/{idx}", response_model=dict)
-def update(idx, mod_user:dict):
-    id =int(idx)
-    if id < len(lista_users):
-        for user in mod_user.values():
-            lista_users[id] = user
-        return {"user": lista_users[id]}
-    return {"message":"User not found"}
-
-@app.delete("/api/usuaris/{idx}", response_model=dict)
-def delete(idx):
-    lista_users.pop(idx)
-    return dict(zip(range(len(lista_users)),lista_users))
-
+@app.get("/user/{id}", response_model=ProductResponse,tags=["READ by ID"])
+async def getProduct(id: int, db: Session= Depends(get_db)):
+    stmt = select(Product).where(Product.id == id)
+    result = db.exec(stmt).first()
+    return ProductResponse.model_validate(result)
