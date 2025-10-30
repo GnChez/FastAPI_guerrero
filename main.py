@@ -1,4 +1,4 @@
-from sqlmodel import SQLModel, create_engine, Session, select, delete
+from sqlmodel import SQLModel, create_engine, Session, select, delete, update
 from dotenv import load_dotenv
 import os
 from fastapi import FastAPI, Depends
@@ -54,7 +54,7 @@ async def getProduct(filtro: str, db: Session= Depends(get_db)):
         product_list.append(prod)
     return {filtro: product_list}
 
-@app.delete("/api/product/{id}", response_model=dict, tags=["DELETE by ID"])
+@app.delete("/api/product/delete/{id}", response_model=dict, tags=["DELETE by ID"])
 async def deleteProduct(id: int, db:Session=Depends(get_db)):
     prod_delete = delete(Product).where(Product.id == id)
     db.exec(prod_delete)
@@ -77,3 +77,30 @@ async def getPartialProducts(id:int,db: Session= Depends(get_db)):
     result = db.exec(stmt).all()
     res = [dict(zip(filtros, row)) for row in result]
     return res
+
+@app.put("/api/product/update/{id}", response_model=Product, tags=["UPDATE"])
+async def updateProduct(id: int, product: Product, db: Session = Depends(get_db)):
+    product_db = db.get(Product, id)
+    product_data = product.model_dump(exclude_unset=True)
+    product_db.sqlmodel_update(product_data)
+    db.add(product_db)
+    db.commit()
+    db.refresh(product_db)
+    return product_db
+
+@app.patch("/api/product/patch/{id}/{camp}", response_model=Product, tags=["PATCH 1"])
+async def patchProduct(id: int,camp:str, product: Product, db:Session=Depends(get_db)):
+    new_value = getattr(product, camp)
+    stmt = update(Product).where(Product.id == id).values({camp: new_value})
+    db.exec(stmt)
+    db.commit()
+    return product
+
+@app.patch("/api/product/multupdate/{id}/camp1/{camp1}/camp2/{camp2}", response_model=Product, tags=["PATCH 2"])
+async def patch2Product(id: int,camp1:str, camp2:str, product: Product, db:Session=Depends(get_db)):
+    new_value1 = getattr(product, camp1)
+    new_value2 = getattr(product, camp2)
+    stmt = update(Product).where(Product.id == id).values({camp1: new_value1, camp2:new_value2})
+    db.exec(stmt)
+    db.commit()
+    return product
