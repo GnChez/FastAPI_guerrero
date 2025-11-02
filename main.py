@@ -94,7 +94,8 @@ async def patchProduct(id: int,camp:str, product: Product, db:Session=Depends(ge
     stmt = update(Product).where(Product.id == id).values({camp: new_value})
     db.exec(stmt)
     db.commit()
-    return product
+    product_db = db.get(Product, id)
+    return product_db
 
 @app.patch("/api/product/multupdate/{id}/camp1/{camp1}/camp2/{camp2}", response_model=Product, tags=["PATCH 2"])
 async def patch2Product(id: int,camp1:str, camp2:str, product: Product, db:Session=Depends(get_db)):
@@ -103,4 +104,5 @@ async def patch2Product(id: int,camp1:str, camp2:str, product: Product, db:Sessi
     stmt = update(Product).where(Product.id == id).values({camp1: new_value1, camp2:new_value2})
     db.exec(stmt)
     db.commit()
-    return product
+    product_db = db.get(Product, id)
+    return product_db
